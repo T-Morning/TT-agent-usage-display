@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import {mkdtempSync, mkdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {fileChecksum, patchProductChecksum, patchWorkbenchHtml, unpatchWorkbenchHtml} from '../integrations/cursor-billing/install-cursor.mjs';
-import {agentPlist, installRelease, label, uninstallRelease} from '../integrations/cursor-billing/release-install.mjs';
+import {fileChecksum, isDirectRun, patchProductChecksum, patchWorkbenchHtml, unpatchWorkbenchHtml} from '../integrations/cursor-billing/install-cursor.mjs';
+import {pathToFileURL} from 'node:url';
+import {agentPlist, elevationCommand, elevationDir, installRelease, label, stageElevation, uninstallRelease} from '../integrations/cursor-billing/release-install.mjs';
 
 test('workbench patch is idempotent', () => {
   const html = '<script src="./workbench.js" type="module"></script>\n</html>\n';
@@ -26,6 +27,27 @@ test('workbench unpatch removes the chip script', () => {
   const removed = unpatchWorkbenchHtml(patched);
   assert.equal(removed.includes('huanling-billing.js'), false);
   assert.match(removed, /workbench\.js/);
+});
+
+test('the elevated installer recognizes the /tmp symlink as the main script', () => {
+  assert.equal(isDirectRun('/tmp/check-main.mjs', pathToFileURL('/private/tmp/check-main.mjs').href), true);
+});
+
+test('elevation command keeps the Cursor paths quoted', () => {
+  const command = elevationCommand('/usr/local/bin/node', '/Users/me/日常试验/install-cursor.mjs', 'uninstall', {
+    htmlPath:'/Applications/Cursor.app/workbench.html'
+  });
+  assert.equal(command.includes('"/usr/local/bin/node"'), true);
+  assert.equal(command.includes('"/Users/me/日常试验/install-cursor.mjs"'), true);
+  assert.equal(command.includes('"uninstall"'), true);
+  assert.equal(command.includes('"--html"'), true);
+});
+
+test('elevation copies the installer outside the document folder', () => {
+  const script = stageElevation();
+  assert.equal(script, join(elevationDir, 'install-cursor.mjs'));
+  assert.equal(script.includes('Documents'), false);
+  assert.equal(readFileSync(script, 'utf8').includes('uninstallCursorBilling'), true);
 });
 
 test('release install copies the reader and can be removed', () => {

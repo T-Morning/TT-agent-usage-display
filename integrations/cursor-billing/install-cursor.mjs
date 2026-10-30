@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {copyFileSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {readFileSync, realpathSync, rmSync, writeFileSync} from 'node:fs';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -33,13 +33,17 @@ export function patchProductChecksum(json, checksum) {
   return json.slice(0, valueStart) + checksum + json.slice(valueEnd);
 }
 
+function placeFile(source, target) {
+  writeFileSync(target, readFileSync(source));
+}
+
 export function installCursorBilling({
   htmlPath = join(workbenchDir, 'workbench.html'),
   dir = workbenchDir,
   productPath = '/Applications/Cursor.app/Contents/Resources/app/product.json'
 } = {}) {
-  copyFileSync(join(here, 'huanling-billing-logic.js'), join(dir, 'huanling-billing-logic.js'));
-  copyFileSync(join(here, 'huanling-billing.js'), join(dir, marker));
+  placeFile(join(here, 'huanling-billing-logic.js'), join(dir, 'huanling-billing-logic.js'));
+  placeFile(join(here, 'huanling-billing.js'), join(dir, marker));
   const next = patchWorkbenchHtml(readFileSync(htmlPath, 'utf8'));
   writeFileSync(htmlPath, next);
   const product = readFileSync(productPath, 'utf8');
@@ -60,7 +64,32 @@ export function uninstallCursorBilling({
   writeFileSync(productPath, patchProductChecksum(product, fileChecksum(readFileSync(htmlPath))));
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  installCursorBilling();
-  console.log('已写入 Cursor 顶部栏。重新加载窗口后，金额会出现在窗口最上方正中。');
+function pathsFromArgv(argv) {
+  const paths = {};
+  for (let index = 0; index < argv.length; index += 1) {
+    if (argv[index] === '--html') paths.htmlPath = argv[++index];
+    else if (argv[index] === '--dir') paths.dir = argv[++index];
+    else if (argv[index] === '--product') paths.productPath = argv[++index];
+  }
+  return paths;
+}
+
+export function isDirectRun(entry = process.argv[1], moduleUrl = import.meta.url) {
+  if (!entry) return false;
+  try {
+    return realpathSync(fileURLToPath(moduleUrl)) === realpathSync(entry);
+  } catch {
+    return fileURLToPath(moduleUrl) === entry;
+  }
+}
+
+if (isDirectRun()) {
+  const action = process.argv[2];
+  const paths = pathsFromArgv(process.argv.slice(3));
+  if (action === 'uninstall') uninstallCursorBilling(paths);
+  else if (action === 'install') installCursorBilling(paths);
+  else {
+    installCursorBilling();
+    console.log('已写入 Cursor 顶部栏。请用 Cmd+Q 完全退出 Cursor，再重新打开。');
+  }
 }

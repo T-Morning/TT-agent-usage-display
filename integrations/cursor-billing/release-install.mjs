@@ -1,5 +1,5 @@
 import {execFileSync} from 'node:child_process';
-import {cpSync, existsSync, mkdirSync, rmSync, writeFileSync} from 'node:fs';
+import {chmodSync, cpSync, existsSync, mkdirSync, rmSync, writeFileSync} from 'node:fs';
 import {homedir} from 'node:os';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -80,11 +80,78 @@ function domain() {
   return `gui/${process.getuid()}`;
 }
 
+export const elevationDir = '/tmp/huanling-cursor-elevate';
+
+export function elevationCommand(nodePath, scriptPath, action, paths = {}) {
+  const args = [nodePath, scriptPath, action];
+  if (paths.htmlPath) args.push('--html', paths.htmlPath);
+  if (paths.dir) args.push('--dir', paths.dir);
+  if (paths.productPath) args.push('--product', paths.productPath);
+  return args.map(arg => JSON.stringify(arg)).join(' ');
+}
+
+export function stageElevation(sourceDir = here) {
+  mkdirSync(elevationDir, {recursive:true, mode:0o755});
+  for (const name of ['install-cursor.mjs', 'huanling-billing.js', 'huanling-billing-logic.js']) {
+    const target = join(elevationDir, name);
+    cpSync(join(sourceDir, name), target);
+    chmodSync(target, 0o644);
+  }
+  chmodSync(elevationDir, 0o755);
+  return join(elevationDir, 'install-cursor.mjs');
+}
+
+function openAppManagementSettings() {
+  const panes = [
+    'x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_AppBundles',
+    'x-apple.systempreferences:com.apple.preference.security?Privacy_AppBundles'
+  ];
+  for (const pane of panes) {
+    try {
+      execFileSync('open', [pane], {stdio:'ignore'});
+      return;
+    } catch { /* this macOS build uses another settings address */ }
+  }
+}
+
+function changeCursorApp(action, paths) {
+  const run = action === 'uninstall' ? uninstallCursorBilling : installCursorBilling;
+  try {
+    run(paths);
+  } catch (error) {
+    if (error?.code !== 'EPERM' && error?.code !== 'EACCES') throw error;
+    openAppManagementSettings();
+    throw new Error('终端还不能修改 Cursor。请在刚打开的「系统设置 → 隐私与安全性 → App 管理」里打开「终端」，然后重新双击这个文件。');
+  }
+}
+
+function commandError(error) {
+  const stderr = error?.stderr ? String(error.stderr) : '';
+  const message = error instanceof Error ? error.message : '';
+  return `${stderr}${message}`.trim();
+}
+
 function enableAgent(plistPath) {
   const target = `${domain()}/${label}`;
+  try { execFileSync('launchctl', ['enable', target], {stdio:'ignore'}); } catch { /* already enabled */ }
   try { execFileSync('launchctl', ['bootout', target], {stdio:'ignore'}); } catch { /* not loaded yet */ }
-  execFileSync('launchctl', ['bootstrap', domain(), plistPath], {stdio:'inherit'});
-  execFileSync('launchctl', ['kickstart', '-k', target], {stdio:'inherit'});
+  let bootstrapped = false;
+  let detail = '账单服务没有启动';
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    try {
+      execFileSync('launchctl', ['bootstrap', domain(), plistPath], {stdio:'pipe', encoding:'utf8'});
+      bootstrapped = true;
+      break;
+    } catch (error) {
+      detail = commandError(error);
+      execFileSync('sleep', ['0.25']);
+    }
+  }
+  try {
+    execFileSync('launchctl', ['kickstart', '-k', target], {stdio:'pipe', encoding:'utf8'});
+  } catch (error) {
+    throw new Error(bootstrapped ? commandError(error) : detail);
+  }
 }
 
 function disableAgent() {
@@ -100,7 +167,7 @@ export function installRelease({
 } = {}) {
   const root = cursorBillingHome(home);
   copyBundle(sourceDir, root);
-  installCursorBilling(cursorPaths(app));
+  changeCursorApp('install', cursorPaths(app));
   const plistPath = launchAgentPath(home);
   mkdirSync(dirname(plistPath), {recursive:true});
   writeFileSync(plistPath, agentPlist({
@@ -116,7 +183,7 @@ export function uninstallRelease({
   app = findCursorApp(home),
   launch = true
 } = {}) {
-  uninstallCursorBilling(cursorPaths(app));
+  changeCursorApp('uninstall', cursorPaths(app));
   rmSync(cursorBillingHome(home), {recursive:true, force:true});
   rmSync(launchAgentPath(home), {force:true});
   if (launch) disableAgent();
