@@ -43,3 +43,28 @@ Computer Use 明确禁止操作 com.openai.codex，未绕过此限制；使用�
 未部署、未公开发布，未修改背景功能或应用包。
 
 最终构建与安装缓存的 UI SHA-256 一致：9338b7a7c5a899432ddcc0e90c3b59eb8b7a251a584f746733daea435b6d2021。最终浏览器控制台错误列表为空；从宠物入口关闭设置后，焦点恢复到宠物入口。最后一次 Hallmark render 为 0 FAIL / 0 REFLEX / 0 WARN。
+
+## 重启后的实际故障复核（2026-10-30）
+
+用户重启后未看到界面。当前聊天已加载 mcp__quota_pet__show_quota_pet，并实际调用成功，返回额度更新结果。安装缓存中的 tools/list 有 ui.resourceUri、thread entrypoint；resources/read 成功返回 text/html;profile=mcp-app。调用后 mcpapps 的侧面板 tabs 仍为空，结合用户报告，原生面板验收失败，不能再描述为“只需重启”。
+
+官方 troubleshooting 文档明确区分服务/发现适用于 Codex，而该页 UI 检查描述 ChatGPT；这不足以保证当前 Codex 本地 stdio 插件渲染 UI。根因目前定位为宿主 UI 接入路径未打通，不能仅凭元数据进一步断言所有版本均不支持。
+
+未修改插件元数据碰运气。启动既有本地浏览器预览，并用官方 open_in_codex 请求右侧打开（返回 queued）；随后通过内置浏览器创建可见页，实际确认双圆环与真实额度。截图 outputs/browser-fallback.png。这是可用的浏览器备用面板，不是原生插件 UI 修复，也不承诺重启后自动常驻。
+
+
+## 原生面板修复与验收（后续同日，取代上节未解决结论）
+
+根因证据：桌面日志显示 quota-pet 的 guest_attached、widget_frame_committed、Started app widget displayMode=inline，以及每分钟 callMcp。此前把“mcpapps tabs 为空”当成“未渲染 UI”不成立，因为该工具只列已展开的侧面板，不列聊天内 inline 卡片。
+
+修复：连接 MCP Apps bridge 后，检查 getHostContext().availableDisplayModes；当提供 fullscreen 且当前为 inline 时，通过 SDK requestDisplayMode({mode:'fullscreen'}) 请求展开。拒绝时保留错误提示和“展开面板”按钮重试，不使用私有 API、不改应用包。已展开不重复请求，不支持时不发请求。
+
+验证：12 项测试通过（新增支持/不支持/已展开/请求被拒绝四种场景）。更新本地插件并调用现有 show_quota_pet 工具后，桌面日志确认 display_mode_changed inline -> fullscreen，reason=display_mode_request。mcpapps 枚举出现“Quota Pet MCP 额度伙伴”，已直接读取原生面板 DOM；5h 与每周真实数据可见，刷新完成后更新时间正常。
+
+在原生面板实际点击菜单 -> 设置，关闭显示宠物并保存后顶部区域消失，重新打开设置并恢复显示成功。没有出现存储保存错误。原生截图 outputs/native-panel-fixed.png；这是 codex-sandbox 页面，不是 localhost 浏览器。
+
+右键已在浏览器验证；mcpapps 自动化不支持非左键，原生面板通过同一菜单按钮验证菜单及设置，未声称自动执行了原生右键。GIF 逐帧、最终宠物形象等原有未完成边界不变。
+
+此次修复解决调用后的原生展开；不承诺应用启动即自动常驻。旧的“宿主未支持 UI”只是先前假设，现已被运行证据推翻。
+
+修复后 Hallmark 静态与渲染检查再次通过：0 FAIL / 0 REFLEX / 0 WARN。用户无需再次重启；当前原生面板已经打开。

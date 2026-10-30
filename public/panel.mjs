@@ -1,5 +1,6 @@
 import {App} from '@modelcontextprotocol/ext-apps';
 import {defaults,validateSettings,ringColor} from '../src/model.mjs';
+import {expandPanel} from '../src/display-mode.mjs';
 const $=id=>document.getElementById(id);
 const petImage=document.createElement('img');petImage.id='petImage';petImage.hidden=true;petImage.alt='自定义宠物';$('petImageMount').append(petImage);
 const petStill=document.createElement('canvas');petStill.hidden=true;petStill.setAttribute('aria-label','暂停的自定义宠物');$('petImageMount').append(petStill);
@@ -95,12 +96,23 @@ $('petFile').onchange=async()=>{
 };
 $('settingsForm').onsubmit=e=>{e.preventDefault();try{const colors={};for(const key of ['fiveHour','weekly'])colors[key]=[0,1,2].map(i=>$(`${key}Color${i}`).value);const next=validateSettings({petVisible:$('petVisible').checked,petPaused:$('petPaused').checked,low:$('low').valueAsNumber,high:$('high').valueAsNumber,colors});savePreferences(next,pendingAsset);$('settings').close()}catch(error){$('settingsError').textContent=error.message}};
 $('refresh').onclick=refresh;
+function updateDisplayControl(){
+ const ctx=app?.getHostContext();
+ $('expandPanel').hidden=!ctx?.availableDisplayModes?.includes('fullscreen')||ctx?.displayMode==='fullscreen';
+}
+async function requestPanel(){
+ $('expandPanel').disabled=true;
+ try{const mode=await expandPanel(app);$('displayStatus').textContent=mode==='fullscreen'?'':mode===null?'当前宿主未提供面板展开能力':'面板未展开，请重试'}
+ catch{$('displayStatus').textContent='面板展开失败，可点击重试'}
+ finally{$('expandPanel').disabled=false;updateDisplayControl()}
+}
+$('expandPanel').onclick=requestPanel;
 render();
 if(window.parent!==window){
   const connection=new App({name:'quota-pet',version:'0.1.0'},{},{autoResize:true});
   connection.ontoolresult=result=>{if(result.structuredContent?.windows){data=result.structuredContent;render()}};
-  connection.onhostcontextchanged=ctx=>{if(ctx.theme)document.documentElement.dataset.theme=ctx.theme};
-  try{await connection.connect();app=connection;const ctx=app.getHostContext();if(ctx?.theme)document.documentElement.dataset.theme=ctx.theme;await refresh()}
+  connection.onhostcontextchanged=ctx=>{if(ctx.theme)document.documentElement.dataset.theme=ctx.theme;updateDisplayControl()};
+  try{await connection.connect();app=connection;const ctx=app.getHostContext();if(ctx?.theme)document.documentElement.dataset.theme=ctx.theme;console.info('quota-pet display context',JSON.stringify({displayMode:ctx?.displayMode,availableDisplayModes:ctx?.availableDisplayModes}));updateDisplayControl();await requestPanel();await refresh()}
   catch{data={status:'error',error:'插件连接未建立，请重新打开面板'};render()}
 }else await refresh();
 setInterval(()=>{if(!document.hidden&&!$('settings').open&&(app||window.parent===window))refresh()},60000);

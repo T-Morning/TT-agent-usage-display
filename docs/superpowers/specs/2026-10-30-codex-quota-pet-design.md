@@ -62,4 +62,4 @@ Plugin Extensions 文档提供 global 入口打开插件全屏页面，thread �
 
 ## 验收边界
 
-已实现本地 MCP 插件、真实额度读取、浏览器 UI、菜单、设置、宠物素材导入及暂停。官方 CLI 安装后显示已启用。详细检查结果见 outputs/validation.md。Codex 原生会话侧面板入口与 sandbox 存储仍需重启后确认；头像上方原生位置、全局背景均未实现。
+已实现本地 MCP 插件、真实额度读取、浏览器 UI、菜单、设置、宠物素材导入及暂停。官方 CLI 安装后显示已启用。详细检查结果见 outputs/validation.md。Codex 原生 MCP App 面板已通过官方显示模式切换打开并验证设置保存；头像上方原生位置、全局背景均未实现。

@@ -1,6 +1,6 @@
 # 额度伙伴
 
-Codex 本地 MCP 插件原型，使用官方 MCP Apps SDK 和 App Server 协议。尚未在 Codex 原生会话侧面板完成安装验收；浏览器预览与 SDK 协议测试已独立进行。只在本地执行的聊天使用，不是官方出品，也未发布到公共目录。
+Codex 本地 MCP 插件原型，使用官方 MCP Apps SDK 和 App Server 协议。原生会话面板已实测打开。插件通过官方 MCP Apps `requestDisplayMode` 请求从 inline 展开为 fullscreen，由 Codex 决定具体面板呈现。已在原生 MCP App 面板中验证额度、菜单、设置和宠物显示开关。只在本地执行的聊天使用，不是官方出品，也未发布到公共目录。
 
 ## 功能
 
@@ -28,14 +28,16 @@ npm run preview
 
 工作目录已经包含 `.agents/plugins/marketplace.json`，指向生成的 `dist/quota-pet` 本地插件包。
 
+已修复：此前入口只启动了聊天内的 inline 卡片；现在连接后自动请求宿主支持的 fullscreen 模式。若展开请求失败，卡片提供“展开面板”重试入口。浏览器预览不需要这一步。
+
 当前已通过官方 CLI 安装并启用 `quota-pet@ttjl-local`，安装缓存位于 `~/.codex/plugins/cache/ttjl-local/quota-pet/0.1.0`。
 
 1. 保持插件包路径不变，重启桌面应用（先保存当前工作）。
 2. 打开插件目录，确认本地来源“TTJL 本地插件”下的“额度伙伴”已启用。
-3. 在本地执行的新聊天中调用“额度伙伴”；检查宿主是否展示会话侧面板入口。
+3. 在本地执行的聊天中调用“额度伙伴”，插件会请求自动展开。
 4. 打开后查看真实额度，右键圆环测试菜单与设置。
 
-官方 thread 入口已声明，但当前版本宿主是否识别本地 stdio 插件的 UI 入口仍需这一步确认。如果只出现工具、没有面板，说明该宿主路径未通过验收；不要当作完整插件效果。Computer Use 无法控制 Codex 应用，因此未代替用户执行重启和原生面板点击验收；CLI 安装及安装后额度调用已通过。
+官方 thread 入口已声明；当前版本已实测从 inline 切换为 fullscreen，并在原生 MCP App 面板完成交互检查。其他宿主可能只支持 inline，插件会检查 availableDisplayModes，不能展开时保留卡片。Computer Use 不能控制 Codex 主应用，但可以通过受支持的 mcpapps 接口操作已打开的插件面板。
 
 若应用未发现 repo marketplace，可按官方说明添加个人 marketplace，指向该插件包；不要覆盖既有个人 marketplace。说明：https://developers.openai.com/plugins/build/plugins
 
@@ -47,6 +49,8 @@ node scripts/package.mjs
 ```
 
 `dist/quota-pet` 包含生产依赖、打包后的自包含 UI 和本地 stdio 服务器。`.mcp.json` 使用官方 `${PLUGIN_ROOT}` 占位符，依赖本地 `node` 和 `codex` 可执行文件可被宿主发现。离线复用该目录无需再次安装 npm 包。若移动源码目录，需重新生成本地 marketplace 路径对应的包。
+
+调用插件后自动展开，不代表启动 Codex 时自动出现；关闭面板后，可再次调用“额度伙伴”。
 
 ## 边界
 
