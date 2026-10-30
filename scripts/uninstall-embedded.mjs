@@ -1,0 +1,12 @@
+import {readFile,rename} from 'node:fs/promises';
+import {spawnSync} from 'node:child_process';
+import {homedir} from 'node:os';
+import path from 'node:path';
+import {installPaths,label} from './embedded-config.mjs';
+if(process.platform!=='darwin')throw new Error('此卸载器仅适用于 macOS');
+const p=installPaths(homedir());
+const marker=await readFile(path.join(p.directory,'installation.json'),'utf8').then(JSON.parse);
+if(marker.owner!==label)throw new Error('安装标记不匹配，停止卸载');
+spawnSync('/bin/launchctl',['bootout',`gui/${process.getuid()}/${label}`],{stdio:'ignore'});
+await rename(p.plist,`${p.plist}.disabled-${Date.now()}`);
+console.log('自动启动已关闭，组件文件与偏好保留，可重新安装恢复。');

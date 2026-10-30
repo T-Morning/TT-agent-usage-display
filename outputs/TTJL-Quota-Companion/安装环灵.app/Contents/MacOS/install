@@ -1,0 +1,34 @@
+#!/bin/bash
+set -u
+root="$(cd "$(dirname "$0")/../../.." && pwd)" || exit 1
+cd "$root" || exit 1
+notify() {
+  /usr/bin/osascript - "$1" "$2" <<'EOF'
+on run argv
+  display dialog (item 1 of argv) buttons {"好"} default button 1 with title "安装环灵" with icon (item 2 of argv)
+end run
+EOF
+}
+badge_node=""
+for badge_candidate in "${CODEX_BADGE_NODE:-}" \
+  "${CODEX_BADGE_APP:-/Applications/Codex.app}/Contents/Resources/cua_node/bin/node" \
+  "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node" \
+  "$HOME/Applications/Codex.app/Contents/Resources/cua_node/bin/node" \
+  "$HOME/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node" \
+  "$(command -v node 2>/dev/null || true)";
+do
+  if [ -n "$badge_candidate" ] && [ -x "$badge_candidate" ] && "$badge_candidate" -e 'if(+process.versions.node.split(".")[0]<24)process.exit(1);require("node:sqlite")' >/dev/null 2>&1; then
+    badge_node="$badge_candidate"
+    break
+  fi
+done
+if [ -z "$badge_node" ]; then
+  notify "未找到 Node.js 24+。请先打开客户端一次，或安装 Node.js 24 后重试。" caution
+  exit 1
+fi
+if "$badge_node" ./manage.cjs install; then
+  notify "环灵已安装。完全退出 Codex 后，从原来的图标打开，等待几秒。" note
+else
+  notify "安装没有完成。可以稍后重试，或在这个目录运行 node manage.cjs status 查看状态。" caution
+  exit 1
+fi

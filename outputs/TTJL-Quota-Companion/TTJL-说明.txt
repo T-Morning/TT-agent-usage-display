@@ -1,0 +1,5 @@
+环灵。基于 Codex Usage Card 0.9.4，保留 MIT 许可证。侧栏双环额度、趴在环上的宠物，以及会动的圆心眼睛。UI VERSION 5304。
+此目录内原有 SHA256SUMS.txt 对应上游文件，修改后的 agent.cjs 不再匹配上游校验。
+双击「安装环灵.app」即可安装。设置窗口左下角可以卸载。安装仍使用上游启动助手和本机调试端口。Node.js 24+。
+安装：node manage.cjs install
+卸载：node manage.cjs uninstall

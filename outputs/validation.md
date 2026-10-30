@@ -68,3 +68,9 @@ Computer Use 明确禁止操作 com.openai.codex，未绕过此限制；使用�
 此次修复解决调用后的原生展开；不承诺应用启动即自动常驻。旧的“宿主未支持 UI”只是先前假设，现已被运行证据推翻。
 
 修复后 Hallmark 静态与渲染检查再次通过：0 FAIL / 0 REFLEX / 0 WARN。用户无需再次重启；当前原生面板已经打开。
+
+## Compact sidebar view — 2026-10-30
+
+Added `/#sidebar` presentation with 112px component width, stacked 80px rings, compact pet stage and menu refresh action. Synchronized HTML to the existing TTJLQuotaPanel local preview installation only; no Codex bundle or main-window injection changes.
+
+Native browser interaction verified: right-click ring opens menu; Settings opens modal; pet switch saves and hides pet stage; menu restores pet visibility. Original visibility restored after verification. Live quota read succeeded. Screenshot: outputs/compact-menu.png. Build and 14 tests passed; rendered Hallmark audit passed with zero findings after spacing token fixes. This is standalone component validation, not target Codex sidebar installation.

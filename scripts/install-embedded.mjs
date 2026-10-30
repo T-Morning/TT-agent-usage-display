@@ -1,0 +1,30 @@
+import {mkdir,readFile,writeFile,cp,stat} from 'node:fs/promises';
+import {spawnSync} from 'node:child_process';
+import {homedir} from 'node:os';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {agentPlist,installPaths,label} from './embedded-config.mjs';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+if(process.platform!=='darwin')throw new Error('此安装器仅适用于 macOS');
+const home=homedir(),p=installPaths(home),service=`gui/${process.getuid()}/${label}`;
+const executable=spawnSync('/usr/bin/which',['codex'],{encoding:'utf8'}).stdout.trim();
+if(!path.isAbsolute(executable))throw new Error('未找到 Codex CLI');
+const source=path.join(root,'dist/quota-pet');
+await stat(path.join(source,'dist/quota.html'));
+const installed=await stat(p.directory).then(()=>true,()=>false);
+if(installed){
+ const marker=await readFile(path.join(p.directory,'installation.json'),'utf8').then(JSON.parse,()=>null);
+ if(marker?.owner!==label)throw new Error('安装目录已存在且不属于此组件，停止以保留现有文件');
+ const backup=path.join(root,'outputs',`embedded-backup-${Date.now()}`);
+ await cp(p.directory,backup,{recursive:true});
+}
+const existingPlist=await readFile(p.plist,'utf8').catch(()=>null);
+if(existingPlist && !existingPlist.includes(`<string>${label}</string>`))throw new Error('启动项名称冲突，停止安装');
+await mkdir(p.directory,{recursive:true});await mkdir(p.logs,{recursive:true});await mkdir(path.dirname(p.plist),{recursive:true});
+if(existingPlist)spawnSync('/bin/launchctl',['bootout',service],{stdio:'ignore'});
+for(const name of ['src','dist/quota.html','node_modules','package.json'])await cp(path.join(source,name),path.join(p.directory,name),{recursive:true});
+await writeFile(path.join(p.directory,'installation.json'),JSON.stringify({owner:label,installedAt:new Date().toISOString(),source:root,url:'http://127.0.0.1:4319/'},null,2),{mode:0o600});
+await writeFile(p.plist,agentPlist({home,node:process.execPath,codex:executable}),{mode:0o600});
+const lint=spawnSync('/usr/bin/plutil',['-lint',p.plist],{encoding:'utf8'});if(lint.status!==0)throw new Error('启动项格式检查失败');
+const start=spawnSync('/bin/launchctl',['bootstrap',`gui/${process.getuid()}`,p.plist],{encoding:'utf8'});if(start.status!==0)throw new Error(`启动服务失败：${start.stderr.trim()}`);
+console.log(JSON.stringify({installed:true,directory:p.directory,plist:p.plist,url:'http://127.0.0.1:4319/'},null,2));

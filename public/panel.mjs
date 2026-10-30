@@ -1,6 +1,8 @@
 import {App} from '@modelcontextprotocol/ext-apps';
 import {defaults,validateSettings,ringColor} from '../src/model.mjs';
 import {expandPanel} from '../src/display-mode.mjs';
+const compact=location.hash==='#sidebar';
+if(compact)document.documentElement.dataset.view='sidebar';
 const $=id=>document.getElementById(id);
 const petImage=document.createElement('img');petImage.id='petImage';petImage.hidden=true;petImage.alt='自定义宠物';$('petImageMount').append(petImage);
 const petStill=document.createElement('canvas');petStill.hidden=true;petStill.setAttribute('aria-label','暂停的自定义宠物');$('petImageMount').append(petStill);
@@ -96,6 +98,7 @@ $('petFile').onchange=async()=>{
 };
 $('settingsForm').onsubmit=e=>{e.preventDefault();try{const colors={};for(const key of ['fiveHour','weekly'])colors[key]=[0,1,2].map(i=>$(`${key}Color${i}`).value);const next=validateSettings({petVisible:$('petVisible').checked,petPaused:$('petPaused').checked,low:$('low').valueAsNumber,high:$('high').valueAsNumber,colors});savePreferences(next,pendingAsset);$('settings').close()}catch(error){$('settingsError').textContent=error.message}};
 $('refresh').onclick=refresh;
+$('menuRefresh').onclick=()=>{closeMenu();refresh()};
 function updateDisplayControl(){
  const ctx=app?.getHostContext();
  $('expandPanel').hidden=!ctx?.availableDisplayModes?.includes('fullscreen')||ctx?.displayMode==='fullscreen';
