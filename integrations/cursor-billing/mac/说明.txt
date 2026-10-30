@@ -1,0 +1,11 @@
+环灵 Cursor 顶部圆环（macOS）
+
+解压后双击「安装.command」。需要本机已经安装 Cursor，并且用账号登录过。还需要 Node.js 22 或更新版本。
+
+安装会做两件事：把个人按量圆环写进 Cursor 窗口顶部，并在本机启动一个只监听 127.0.0.1 的账单读取服务。账单不会上传。
+
+装好后请用 Cmd+Q 完全退出 Cursor，再从原来的图标打开。金额出现在窗口最上方正中，格式是按量已用 / 按量额度。如果系统询问钥匙串「Cursor Safe Storage」，请允许。
+
+Cursor 更新后这个改动会被覆盖，需要再运行一次「安装.command」。卸下时双击「卸载.command」，然后同样用 Cmd+Q 退出再打开。
+
+这个包只支持 macOS，来自 cursor/dialog-billing 分支。安装包未经 Apple 公证。

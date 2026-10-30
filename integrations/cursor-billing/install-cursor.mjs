@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {copyFileSync, readFileSync, writeFileSync} from 'node:fs';
+import {copyFileSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -7,9 +7,15 @@ const here = dirname(fileURLToPath(import.meta.url));
 export const workbenchDir = '/Applications/Cursor.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench';
 const marker = 'huanling-billing.js';
 
+const scriptTag = `\t<script src="./${marker}" type="module"></script>\n`;
+
 export function patchWorkbenchHtml(html) {
   if (html.includes(marker)) return html;
-  return html.replace('</html>', `\t<script src="./${marker}" type="module"></script>\n</html>\n`);
+  return html.replace('</html>', `${scriptTag}</html>\n`);
+}
+
+export function unpatchWorkbenchHtml(html) {
+  return html.replaceAll(scriptTag, '').replaceAll(`<script src="./${marker}" type="module"></script>\n`, '');
 }
 
 export function fileChecksum(bytes) {
@@ -36,6 +42,19 @@ export function installCursorBilling({
   copyFileSync(join(here, 'huanling-billing.js'), join(dir, marker));
   const next = patchWorkbenchHtml(readFileSync(htmlPath, 'utf8'));
   writeFileSync(htmlPath, next);
+  const product = readFileSync(productPath, 'utf8');
+  writeFileSync(productPath, patchProductChecksum(product, fileChecksum(readFileSync(htmlPath))));
+}
+
+export function uninstallCursorBilling({
+  htmlPath = join(workbenchDir, 'workbench.html'),
+  dir = workbenchDir,
+  productPath = '/Applications/Cursor.app/Contents/Resources/app/product.json'
+} = {}) {
+  const next = unpatchWorkbenchHtml(readFileSync(htmlPath, 'utf8'));
+  writeFileSync(htmlPath, next);
+  rmSync(join(dir, 'huanling-billing-logic.js'), {force:true});
+  rmSync(join(dir, marker), {force:true});
   const product = readFileSync(productPath, 'utf8');
   writeFileSync(productPath, patchProductChecksum(product, fileChecksum(readFileSync(htmlPath))));
 }
