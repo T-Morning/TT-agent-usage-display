@@ -116,10 +116,10 @@ export function uninstallRelease({
   app = findCursorApp(home),
   launch = true
 } = {}) {
-  if (launch) disableAgent();
-  rmSync(launchAgentPath(home), {force:true});
   uninstallCursorBilling(cursorPaths(app));
   rmSync(cursorBillingHome(home), {recursive:true, force:true});
+  rmSync(launchAgentPath(home), {force:true});
+  if (launch) disableAgent();
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

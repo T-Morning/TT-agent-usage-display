@@ -5,6 +5,14 @@ import {fileURLToPath} from 'node:url';
 import {cursorSummaryHeaders} from '../../src/cursor-billing.mjs';
 import {decryptCursorSecret} from '../../src/cursor-secret.mjs';
 import {cursorStatePath, readCursorAccessToken} from '../../src/cursor-session.mjs';
+function quoteApple(value) {
+  return `"${String(value).replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
+}
+
+export function terminalUninstallScript(nodePath = process.execPath, scriptPath = fileURLToPath(new URL('./release-install.mjs', import.meta.url))) {
+  const command = `${nodePath} ${JSON.stringify(scriptPath)} uninstall`;
+  return `tell application "Terminal" to do script ${quoteApple(command)}`;
+}
 
 const SUMMARY = 'https://cursor.com/api/usage-summary';
 const snapshotPath = '/Applications/Cursor.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/huanling-billing.json';
@@ -26,17 +34,34 @@ export async function readStoredUsageSummary({
   return response.json();
 }
 
-export function startSummaryServer({fetchSummary, port = 39231, host = '127.0.0.1'} = {}) {
+export function startSummaryServer({fetchSummary, onUninstall, port = 39231, host = '127.0.0.1'} = {}) {
   const server = http.createServer(async (req, res) => {
     const headers = {
       'content-type':'application/json',
       'access-control-allow-origin':'*',
       'access-control-allow-private-network':'true',
-      'access-control-allow-methods':'GET, OPTIONS'
+      'access-control-allow-methods':'GET, POST, OPTIONS'
     };
     if (req.method === 'OPTIONS') {
       res.writeHead(204, headers);
       res.end();
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/uninstall') {
+      if (typeof onUninstall !== 'function') {
+        res.writeHead(404, headers);
+        res.end('{"error":"not-found"}');
+        return;
+      }
+      try {
+        await onUninstall();
+        res.writeHead(204, headers);
+        res.end();
+      } catch {
+        if (res.headersSent) return;
+        res.writeHead(500, headers);
+        res.end('{"error":"uninstall-failed"}');
+      }
       return;
     }
     if (req.url !== '/usage-summary') {
@@ -72,6 +97,9 @@ async function main() {
       cachedAt = Date.now();
       try { publish(cached); } catch (error) { console.error('snapshot', error instanceof Error ? error.code || error.message : 'write-failed'); }
       return cached;
+    },
+    onUninstall: async () => {
+      execFileSync('osascript', ['-e', terminalUninstallScript()]);
     }
   });
   console.log(`账单服务已在 http://127.0.0.1:${server.address().port}/usage-summary`);

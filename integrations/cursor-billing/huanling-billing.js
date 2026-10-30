@@ -2,6 +2,7 @@ import {billingView, clampTip, normalizeCursorBilling} from './huanling-billing-
 
 const ID = 'cursor-billing-chip';
 const SUMMARY = 'http://127.0.0.1:39231/usage-summary';
+const UNINSTALL = 'http://127.0.0.1:39231/uninstall';
 const PREFS = 'ttjl.cursor-billing.v1';
 const initial = {visible:false, paused:false, pet:'', eyes:true, face:'#f3f6fb', low:20, high:50, colors:['#b3443c', '#a46b20', '#327657']};
 let view = {label:'读取中', detail:'正在读取 Cursor 账单', percent:null};
@@ -73,7 +74,9 @@ function ensureStyle() {
     .ttjl-settings button{min-height:40px;padding:8px 16px;border:0;border-radius:999px;background:rgba(120,120,128,.16);color:inherit;font:inherit;cursor:pointer}
     .ttjl-wells{display:flex;gap:8px;flex:none}
     .ttjl-group>button{margin:2px 8px 8px}
-    .ttjl-actions{display:flex;justify-content:flex-end;gap:8px;padding:4px 4px 0}
+    .ttjl-actions{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 4px 0}
+    .ttjl-action-end{display:flex;gap:8px;margin-left:auto}
+    .ttjl-settings button.ttjl-uninstall{background:transparent;color:#d70015}
     .ttjl-actions button[type=submit]{background:#0a84ff;color:#fff;font-weight:650}
     .ttjl-error{min-height:1.2em;margin:0 8px 8px;color:#d70015;font-size:12px}
     .ttjl-settings :focus-visible,.ttjl-menu :focus-visible{outline:2px solid #0a84ff;outline-offset:2px}
@@ -88,7 +91,8 @@ function ensureStyle() {
     body.vs-dark .ttjl-note,body.hc-black .ttjl-note{color:rgba(235,235,245,.6)}
     body.vs-dark .ttjl-settings input,body.hc-black .ttjl-settings input,body.vs-dark .ttjl-settings button,body.hc-black .ttjl-settings button{color:#f2f2f7}
     body.vs-dark .ttjl-actions button[type=submit],body.hc-black .ttjl-actions button[type=submit]{background:#0a84ff;color:#fff}
-    @media(prefers-color-scheme:dark){html:not([data-theme="light"]) #${ID}{background:rgba(38,38,42,.5);border-color:rgba(255,255,255,.2);color:#f5f5f7;box-shadow:0 10px 24px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.16)}html:not([data-theme="light"]) #cursor-billing-tip,html:not([data-theme="light"]) .ttjl-menu,html:not([data-theme="light"]) .ttjl-settings{background:rgba(38,38,42,.62)!important;color:#f2f2f7!important;border-color:rgba(255,255,255,.18)!important}html:not([data-theme="light"]) .ttjl-group{background:rgba(255,255,255,.08)}html:not([data-theme="light"]) .ttjl-actions button[type=submit]{background:#0a84ff;color:#fff}}
+    body.vs-dark .ttjl-settings button.ttjl-uninstall,body.hc-black .ttjl-settings button.ttjl-uninstall{background:transparent;color:#ff453a}
+    @media(prefers-color-scheme:dark){html:not([data-theme="light"]) #${ID}{background:rgba(38,38,42,.5);border-color:rgba(255,255,255,.2);color:#f5f5f7;box-shadow:0 10px 24px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.16)}html:not([data-theme="light"]) #cursor-billing-tip,html:not([data-theme="light"]) .ttjl-menu,html:not([data-theme="light"]) .ttjl-settings{background:rgba(38,38,42,.62)!important;color:#f2f2f7!important;border-color:rgba(255,255,255,.18)!important}html:not([data-theme="light"]) .ttjl-group{background:rgba(255,255,255,.08)}html:not([data-theme="light"]) .ttjl-actions button[type=submit]{background:#0a84ff;color:#fff}html:not([data-theme="light"]) .ttjl-settings button.ttjl-uninstall{background:transparent;color:#ff453a}}
     @media(prefers-reduced-motion:reduce){#${ID} .usage-ring-value,#${ID} .ttjl-eye,#${ID} .ttjl-eye i,.ttjl-settings input[type=checkbox]::before{transition:none;animation:none}}
   `;
   document.head.appendChild(style);
@@ -245,7 +249,10 @@ function openSettings(dialog, menu) {
   sheet.append(petGroup, fileGroup, limitGroup, colors);
   const actions = document.createElement('div');
   actions.className = 'ttjl-actions';
-  actions.append(field('button', {name:'cancel', type:'button', text:'取消'}), field('button', {type:'submit', text:'保存'}));
+  const actionEnd = document.createElement('span');
+  actionEnd.className = 'ttjl-action-end';
+  actionEnd.append(field('button', {name:'cancel', type:'button', text:'取消'}), field('button', {type:'submit', text:'保存'}));
+  actions.append(field('button', {name:'uninstall', type:'button', className:'ttjl-uninstall', text:'卸载'}), actionEnd);
   form.append(field('h2', {text:'环灵'}), sheet, field('p', {className:'ttjl-error', role:'alert'}), actions);
   const fields = form.elements;
   const err = form.querySelector('[role=alert]');
@@ -278,6 +285,26 @@ function openSettings(dialog, menu) {
     backdrop.style.setProperty('display', 'none', 'important');
   };
   fields.cancel.onclick = event => { event.preventDefault(); closeSettings(); };
+  fields.uninstall.onclick = async event => {
+    event.preventDefault();
+    if (location.protocol === 'http:') { err.textContent = '预览页不能卸载本机组件'; return; }
+    if (!window.confirm('卸载环灵？顶部圆环和本机账单服务都会停止。')) return;
+    fields.uninstall.disabled = true;
+    err.textContent = '正在卸载，几秒后圆环会消失';
+    try {
+      const response = await fetch(UNINSTALL, {method:'POST'});
+      if (!response.ok) throw new Error('uninstall');
+      document.getElementById(ID)?.remove();
+      document.getElementById('cursor-billing-tip')?.remove();
+      document.getElementById('cursor-billing-style')?.remove();
+      closeSettings();
+      dialog.remove();
+      dialog.previousElementSibling?.remove();
+    } catch {
+      fields.uninstall.disabled = false;
+      err.textContent = '卸载没有完成。请改用安装包里的「卸载.command」，再用 Cmd+Q 退出 Cursor。';
+    }
+  };
   dialog.onkeydown = event => { if (event.key === 'Escape') { event.preventDefault(); closeSettings(); } };
   fields.remove.onclick = () => { serial += 1; asset = ''; fields.file.value = ''; reading = false; err.textContent = '保存后移除素材'; };
   fields.file.onchange = async () => {

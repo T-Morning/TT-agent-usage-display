@@ -7,7 +7,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {clampTip} from '../integrations/cursor-billing/huanling-billing-logic.js';
 import {billingView, cursorSummaryHeaders, formatDollars, normalizeCursorBilling, readCursorBilling} from '../src/cursor-billing.mjs';
 import {decryptCursorSecret, encryptCursorSecret} from '../src/cursor-secret.mjs';
-import {startSummaryServer} from '../integrations/cursor-billing/summary-server.mjs';
+import {startSummaryServer, terminalUninstallScript} from '../integrations/cursor-billing/summary-server.mjs';
 import {cursorStatePath, readCursorAccessToken} from '../src/cursor-session.mjs';
 
 const summary = {
@@ -120,10 +120,41 @@ test('the local summary server returns the upstream bill and hides failures', as
     const preflight = await fetch(`http://127.0.0.1:${server.address().port}/usage-summary`, {method:'OPTIONS'});
     assert.equal(preflight.status, 204);
     assert.equal(preflight.headers.get('access-control-allow-private-network'), 'true');
+    const missing = await fetch(`http://127.0.0.1:${server.address().port}/uninstall`, {method:'POST'});
+    assert.equal(missing.status, 404);
   } finally {
     server.close();
     failing.close();
   }
+});
+
+test('the uninstall button can ask the local reader to remove the chip', async () => {
+  let calls = 0;
+  const server = await startSummaryServer({
+    port:0,
+    fetchSummary: async () => ({ok:true}),
+    onUninstall: async () => { calls += 1; }
+  });
+  const failing = await startSummaryServer({
+    port:0,
+    fetchSummary: async () => ({ok:true}),
+    onUninstall: async () => { throw new Error('blocked'); }
+  });
+  try {
+    const ok = await fetch(`http://127.0.0.1:${server.address().port}/uninstall`, {method:'POST'});
+    assert.equal(ok.status, 204);
+    assert.equal(calls, 1);
+    const denied = await fetch(`http://127.0.0.1:${failing.address().port}/uninstall`, {method:'POST'});
+    assert.equal(denied.status, 500);
+  } finally {
+    server.close();
+    failing.close();
+  }
+});
+
+test('the uninstall handoff keeps paths with spaces quoted', () => {
+  const script = terminalUninstallScript('/usr/local/bin/node', '/Users/me/日常试验/release-install.mjs');
+  assert.match(script, /do script "\/usr\/local\/bin\/node \\"\/Users\/me\/日常试验\/release-install\.mjs\\" uninstall"/);
 });
 
 test('a successful usage summary becomes the split view', async () => {
