@@ -13,6 +13,18 @@ Codex 本地 MCP 插件原型，使用官方 MCP Apps SDK 和 App Server 协议�
 - 动画可暂停，减少动态模式显示静止帧；隐藏宠物收起空间。
 - 每分钟刷新，页面不可见时停止轮询；读取失败保留上次数据并标记过期。
 
+## 快速安装（macOS 侧栏圆环）
+
+克隆后，在仓库根目录执行安装入口：
+
+```sh
+/bin/bash outputs/TTJL-Quota-Companion/安装.command
+```
+
+需已安装 Codex 桌面客户端，以及 Node.js 24+（支持 `node:sqlite`）。入口会查找客户端内置 Node、PATH 和 Homebrew 默认路径；自定义位置可用 `CODEX_BADGE_NODE=/绝对路径/node` 指定。安装完成后保存工作，完全退出 Codex，再从原图标启动。详细说明见 [macOS 安装帮助](outputs/TTJL-Quota-Companion/docs/macos.md)。
+
+以下本地开发和 MCP 插件流程是另一种集成方式，与上述侧栏安装包分开。
+
 ## 本地开发
 
 需要 Node 22+、已安装且通过 ChatGPT 登录的 Codex CLI。无需 OpenAI API key。
