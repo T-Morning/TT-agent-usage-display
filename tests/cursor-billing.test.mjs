@@ -7,7 +7,8 @@ import {DatabaseSync} from 'node:sqlite';
 import {clampTip} from '../integrations/cursor-billing/huanling-billing-logic.js';
 import {billingView, cursorSummaryHeaders, formatDollars, normalizeCursorBilling, readCursorBilling} from '../src/cursor-billing.mjs';
 import {decryptCursorSecret, encryptCursorSecret} from '../src/cursor-secret.mjs';
-import {startSummaryServer, terminalUninstallScript} from '../integrations/cursor-billing/summary-server.mjs';
+import {existsSync} from 'node:fs';
+import {startSummaryServer, uninstallCommandPath} from '../integrations/cursor-billing/summary-server.mjs';
 import {cursorStatePath, readCursorAccessToken} from '../src/cursor-session.mjs';
 
 const summary = {
@@ -152,9 +153,10 @@ test('the uninstall button can ask the local reader to remove the chip', async (
   }
 });
 
-test('the uninstall handoff keeps paths with spaces quoted', () => {
-  const script = terminalUninstallScript('/usr/local/bin/node', '/Users/me/日常试验/release-install.mjs');
-  assert.match(script, /do script "\/usr\/local\/bin\/node \\"\/Users\/me\/日常试验\/release-install\.mjs\\" uninstall"/);
+test('uninstall opens the double-click command instead of editing Cursor from the background', () => {
+  const command = uninstallCommandPath();
+  assert.equal(command.endsWith('/mac/卸载.command'), true);
+  assert.equal(existsSync(command), true);
 });
 
 test('a successful usage summary becomes the split view', async () => {

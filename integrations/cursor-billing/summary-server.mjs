@@ -5,13 +5,8 @@ import {fileURLToPath} from 'node:url';
 import {cursorSummaryHeaders} from '../../src/cursor-billing.mjs';
 import {decryptCursorSecret} from '../../src/cursor-secret.mjs';
 import {cursorStatePath, readCursorAccessToken} from '../../src/cursor-session.mjs';
-function quoteApple(value) {
-  return `"${String(value).replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
-}
-
-export function terminalUninstallScript(nodePath = process.execPath, scriptPath = fileURLToPath(new URL('./release-install.mjs', import.meta.url))) {
-  const command = `${nodePath} ${JSON.stringify(scriptPath)} uninstall`;
-  return `tell application "Terminal" to do script ${quoteApple(command)}`;
+export function uninstallCommandPath(scriptUrl = import.meta.url) {
+  return fileURLToPath(new URL('./mac/卸载.command', scriptUrl));
 }
 
 const SUMMARY = 'https://cursor.com/api/usage-summary';
@@ -57,7 +52,8 @@ export function startSummaryServer({fetchSummary, onUninstall, port = 39231, hos
         await onUninstall();
         res.writeHead(204, headers);
         res.end();
-      } catch {
+      } catch (error) {
+        console.error('uninstall', error instanceof Error ? error.message : 'failed');
         if (res.headersSent) return;
         res.writeHead(500, headers);
         res.end('{"error":"uninstall-failed"}');
@@ -99,7 +95,7 @@ async function main() {
       return cached;
     },
     onUninstall: async () => {
-      execFileSync('osascript', ['-e', terminalUninstallScript()]);
+      execFileSync('/usr/bin/open', [uninstallCommandPath()]);
     }
   });
   console.log(`账单服务已在 http://127.0.0.1:${server.address().port}/usage-summary`);

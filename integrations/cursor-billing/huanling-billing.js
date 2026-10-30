@@ -7,6 +7,8 @@ const PREFS = 'ttjl.cursor-billing.v1';
 const initial = {visible:false, paused:false, pet:'', eyes:true, face:'#f3f6fb', low:20, high:50, colors:['#b3443c', '#a46b20', '#327657']};
 let view = {label:'读取中', detail:'正在读取 Cursor 账单', percent:null};
 let scanTimer = 0;
+let refreshTimer = 0;
+let retired = false;
 let prefs = structuredClone(initial);
 
 function ready(value) {
@@ -290,10 +292,13 @@ function openSettings(dialog, menu) {
     if (location.protocol === 'http:') { err.textContent = '预览页不能卸载本机组件'; return; }
     if (!window.confirm('卸载环灵？顶部圆环和本机账单服务都会停止。')) return;
     fields.uninstall.disabled = true;
-    err.textContent = '正在卸载，几秒后圆环会消失';
+    err.textContent = '正在打开终端卸载。完成后请用 Cmd+Q 退出 Cursor。';
     try {
       const response = await fetch(UNINSTALL, {method:'POST'});
       if (!response.ok) throw new Error('uninstall');
+      retired = true;
+      observer.disconnect();
+      clearInterval(refreshTimer);
       document.getElementById(ID)?.remove();
       document.getElementById('cursor-billing-tip')?.remove();
       document.getElementById('cursor-billing-style')?.remove();
@@ -451,7 +456,7 @@ function paint() {
 }
 
 function scan() {
-  if (!document.body) return;
+  if (retired || !document.body) return;
   ensureStyle();
   paint();
 }
@@ -462,6 +467,7 @@ function schedule() {
 }
 
 async function refresh() {
+  if (retired) return;
   const urls = [SUMMARY, `./huanling-billing.json?t=${Date.now()}`];
   let failure = '账单服务没有连上';
   for (const url of urls) {
@@ -487,4 +493,4 @@ const observer = new MutationObserver(records => {
 });
 observer.observe(document.documentElement, {childList:true, subtree:true});
 refresh();
-setInterval(refresh, 60000);
+refreshTimer = setInterval(refresh, 60000);
