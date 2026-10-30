@@ -1,0 +1,45 @@
+name: Publish macOS installer
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/publish-macos.yml]
+permissions:
+  contents: write
+concurrency:
+  group: publish-macos-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify package and build ZIP
+        shell: bash
+        run: |
+          cd outputs/TTJL-Quota-Companion
+          sha256sum -c SHA256SUMS.txt
+          cd ..
+          zip -qr ../../Huanling-macOS-v0.1.0.zip TTJL-Quota-Companion
+      - name: Update release assets and checksum
+        shell: bash
+        run: |
+          gh release download v0.1.0 --pattern SHA256SUMS.txt
+          python3 - <<'PY'
+          import hashlib, pathlib, re, subprocess
+          name='Huanling-macOS-v0.1.0.zip'
+          digest=hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()
+          p=pathlib.Path('SHA256SUMS.txt')
+          p.write_text(re.sub(r'[a-f0-9]{64}(\s+Huanling-macOS-v0\.1\.0\.zip)',lambda m:digest+m[1],p.read_text()))
+          body=subprocess.check_output(['gh','release','view','v0.1.0','--json','body','--jq','.body'],text=True)
+          body=re.sub(r'[a-f0-9]{64}(\s+Huanling-macOS-v0\.1\.0\.zip)',lambda m:digest+m[1],body)
+          pathlib.Path('release-notes.md').write_text(body)
+          PY
+          gh release upload v0.1.0 Huanling-macOS-v0.1.0.zip SHA256SUMS.txt --clobber
+          gh release edit v0.1.0 --notes-file release-notes.md
+          mkdir verify
+          gh release download v0.1.0 --pattern Huanling-macOS-v0.1.0.zip --dir verify
+          cmp Huanling-macOS-v0.1.0.zip verify/Huanling-macOS-v0.1.0.zip
