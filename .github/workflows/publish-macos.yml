@@ -23,7 +23,7 @@ jobs:
           cd outputs/TTJL-Quota-Companion
           sha256sum -c SHA256SUMS.txt
           cd ..
-          zip -qr ../../Huanling-macOS-v0.1.0.zip TTJL-Quota-Companion
+          zip -qr ../Huanling-macOS-v0.1.0.zip TTJL-Quota-Companion
       - name: Update release assets and checksum
         shell: bash
         run: |
