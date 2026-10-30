@@ -17,7 +17,7 @@ const label = 'com.codexusagebadge.agent';
 const activationLabel = 'com.codexusagebadge.activate-once';
 const startupLabel='com.codexusagebadge.startup';
 const updaterLabel='com.codexusagebadge.updater';
-const gui = `gui/${process.getuid()}`;
+const gui = `gui/${typeof process.getuid === 'function' ? process.getuid() : 0}`;
 const plistPath = path.join(home, 'Library/LaunchAgents', `${label}.plist`);
 const startupPlist=path.join(home,'Library/LaunchAgents',startupLabel+'.plist');
 const updaterPlist=path.join(home,'Library/LaunchAgents',updaterLabel+'.plist');
@@ -560,6 +560,7 @@ async function status() {
 module.exports={startupConfig,updaterConfig,agentConfig,activationConfig,waitForExit,xml,install,uninstall,preflight,expectedUiVersion,inspectUsageBadge,activate,inspectUpdaterMigration,migrateUpdater};
 if(require.main===module)(async()=>{
   const action=process.argv[2];
+  if(process.platform==='win32'){await require('./windows/cli.cjs').main(process.argv.slice(2));return;}
   if(action==='install')await install({manualTest:process.argv.includes('--manual-test')});
   else if(action==='schedule-activation')await scheduleActivation({waitForExit:process.argv.includes('--wait-for-exit')});
   else if(action==='activate'){await pause(3000);await activate({allowRestart:process.argv.includes('--allow-restart')});}
