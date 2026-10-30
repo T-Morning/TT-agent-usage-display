@@ -1,0 +1,1 @@
+{"name":"ttjl-local","interface":{"displayName":"TTJL 本地插件"},"plugins":[{"name":"quota-pet","source":{"source":"local","path":"./dist/quota-pet"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity","interface":{"displayName":"额度伙伴"}}]}

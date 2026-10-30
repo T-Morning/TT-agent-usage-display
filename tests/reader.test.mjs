@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {createQuotaReader} from '../src/quota.mjs';
+test('concurrent refreshes share one read and expose no upstream secrets',async()=>{let count=0;const reader=createQuotaReader(async()=>{count++;return {windows:{fiveHour:{remaining:70}},updatedAt:123}});const [a,b]=await Promise.all([reader(),reader()]);assert.equal(count,1);assert.deepEqual(a,b);assert.equal(a.status,'ready')});
+test('failed initial read is unavailable rather than zero',async()=>{const reader=createQuotaReader(async()=>{throw new Error('secret upstream diagnostic')});const r=await reader();assert.equal(r.status,'error');assert.equal(r.windows.fiveHour,null);assert.ok(!r.error.includes('secret'))});

@@ -1,0 +1,1 @@
+{"mcpServers":{"quota-pet":{"command":"node","args":["${PLUGIN_ROOT}/src/server.mjs"]}}}
