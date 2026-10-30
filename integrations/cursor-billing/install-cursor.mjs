@@ -55,6 +55,7 @@ export function uninstallCursorBilling({
   writeFileSync(htmlPath, next);
   rmSync(join(dir, 'huanling-billing-logic.js'), {force:true});
   rmSync(join(dir, marker), {force:true});
+  rmSync(join(dir, 'huanling-billing.json'), {force:true});
   const product = readFileSync(productPath, 'utf8');
   writeFileSync(productPath, patchProductChecksum(product, fileChecksum(readFileSync(htmlPath))));
 }

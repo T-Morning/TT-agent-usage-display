@@ -1,7 +1,18 @@
 #!/bin/bash
 # Run from a completely extracted release, including paths with spaces.
 set -u
-cd "$(dirname "$0")" || exit 1
+here="$(cd "$(dirname "$0")" && pwd)" || exit 1
+if [ -f "$here/integrations/cursor-billing/release-install.mjs" ]; then
+  script="$here/integrations/cursor-billing/release-install.mjs"
+elif [ -f "$here/../release-install.mjs" ]; then
+  script="$here/../release-install.mjs"
+else
+  echo "找不到安装程序。"
+  echo
+  read -r -p "按回车关闭…" _ || true
+  exit 1
+fi
+cd "$(dirname "$script")/../.." || exit 1
 badge_node=""
 for badge_candidate in "${HUANLING_NODE:-}" \
   "/usr/local/bin/node" \
@@ -17,7 +28,7 @@ if [ -z "$badge_node" ]; then
   echo "未找到 Node.js 22+。请安装 Node.js 22 或更新版本后重试。"
   result=1
 else
-  "$badge_node" "./integrations/cursor-billing/release-install.mjs" install
+  "$badge_node" "$script" install
   result=$?
 fi
 echo
