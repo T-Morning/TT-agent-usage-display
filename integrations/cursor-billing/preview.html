@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>Cursor 账单悬浮</title>
+  <link rel="stylesheet" href="./chip.css?v=2">
+  <style>
+    html, body { height: 100%; margin: 0; background: #1e1e1e; color: #ddd; }
+    [data-agent-panel-conversation-shell] { position: relative; height: 100vh; }
+    .messages { height: 100%; overflow: auto; padding: 48px 28px 24px; font: 14px/1.6 ui-sans-serif, system-ui, sans-serif; }
+    .messages p { max-width: 62ch; }
+  </style>
+</head>
+<body>
+  <div data-agent-panel-conversation-shell>
+    <div class="messages">
+      <p>对话框从这里开始。顶部正中的金额不占这一列，往下滚时它停在原处。</p>
+      <p>本期金额来自 Cursor 的计费周期，不是 Codex 的 5 小时窗口。</p>
+      <p>把鼠标停在金额上，可以看到个人套餐和团队额度是分开的。</p>
+      <p>下面是用来滚动的占位。</p>
+      <p>一行。</p><p>一行。</p><p>一行。</p><p>一行。</p><p>一行。</p>
+      <p>一行。</p><p>一行。</p><p>一行。</p><p>一行。</p><p>一行。</p>
+      <p>一行。</p><p>一行。</p><p>一行。</p><p>一行。</p><p>一行。</p>
+      <p>滚到底了。</p>
+    </div>
+  </div>
+  <script type="module">
+    import {mountBillingChip} from './chip.js?v=3';
+    mountBillingChip(document.querySelector('[data-agent-panel-conversation-shell]'), {
+      label: '个人 $20.00 · 团队 $160,431.89',
+      detail: '企业团队\n周期结束 11/3 13:33\n个人\n套餐已用 $20.00\n套餐额度 $20.00\n套餐剩余 $0.00\n套餐比例 100%\n按量已用 $259.51\n按量额度 $526.00\n按量剩余 $266.49\n团队\n本期已用 $160,431.89\n团队额度 $480,000.00\n剩余 $319,568.11'
+    });
+  </script>
+</body>
+</html>
