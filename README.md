@@ -1,6 +1,6 @@
 # 额度伙伴
 
-macOS 安装包和发布说明：[环灵 v0.1.0](https://github.com/T-Morning/TT-agent-usage-display/releases/tag/v0.1.0)。
+macOS 安装包和发布说明：[环灵 v0.1.0](https://github.com/T-Morning/TT-agent-usage-display/releases/tag/v0.1.0)。这个安装包只支持 macOS。Windows 适配在 [win](https://github.com/T-Morning/TT-agent-usage-display/tree/win) 分支进行，计划支持在 Windows 上安装使用，以及 token 花费。
 
 Codex 本地 MCP 插件原型，使用官方 MCP Apps SDK 和 App Server 协议。原生会话面板已实测打开。插件通过官方 MCP Apps `requestDisplayMode` 请求从 inline 展开为 fullscreen，由 Codex 决定具体面板呈现。已在原生 MCP App 面板中验证额度、菜单、设置和宠物显示开关。只在本地执行的聊天使用，不是官方出品，也未发布到公共目录。
 
