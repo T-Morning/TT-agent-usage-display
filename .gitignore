@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.tools/
 .taste-skill/
 .env*
 outputs/*quota*.json
